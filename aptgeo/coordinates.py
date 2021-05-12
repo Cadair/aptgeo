@@ -16,7 +16,7 @@ from astropy.time import Time
 from poliastro.twobody import Orbit
 from poliastro.twobody.propagation import propagate
 
-__all__ = ['get_pass_ground_track', 'get_satellite_orbit']
+__all__ = ['get_pass_coordinates', 'get_satellite_orbit']
 
 
 # Cache this so we don't download the file more than once, but also don't cache
@@ -52,10 +52,10 @@ def get_satellite_orbit(satellite_name: str,
     return get_weather_tle(tle_location)[satellite_name].to_orbit()
 
 
-def get_pass_ground_track(satellite: Orbit,
-                          start_time: Time,
-                          pass_length: u.Quantity,
-                          sample_time: u.Quantity) -> SkyCoord:
+def get_pass_coordinates(satellite: Orbit,
+                         start_time: Time,
+                         pass_length: u.Quantity,
+                         sample_time: u.Quantity) -> SkyCoord:
     """
     Given an `~poliastro.twobody.Orbit` object generate the coordinates for a pass.
 
@@ -99,4 +99,7 @@ def get_pass_ground_track(satellite: Orbit,
     # Generate the coordinates of the satellite during the pass
     sc_position = propagate(satellite, pass_times).without_differentials()
     sc_position = coords.SkyCoord(satellite.get_frame().realize_frame(sc_position))
-    return sc_position.transform_to(coords.ITRS())
+    sc_position = sc_position.transform_to(coords.ITRS())
+    sc_position.representation_type = coords.WGS84GeodeticRepresentation
+
+    return sc_position
