@@ -1,19 +1,20 @@
 """
 Functionality for generating coordinates for passes and images.
 """
-
+import os
+from typing import Dict, Union
 from functools import lru_cache
-from typing import Dict
 from urllib.request import urlopen
+
+import numpy as np
+from tletools import TLE
 
 import astropy.coordinates as coords
 import astropy.units as u
-import numpy as np
 from astropy.coordinates.sky_coordinate import SkyCoord
 from astropy.time import Time
 from poliastro.twobody import Orbit
 from poliastro.twobody.propagation import propagate
-from tletools import TLE
 
 __all__ = ['get_pass_ground_track', 'get_satellite_orbit']
 
@@ -21,12 +22,20 @@ __all__ = ['get_pass_ground_track', 'get_satellite_orbit']
 # Cache this so we don't download the file more than once, but also don't cache
 # it to disk or else we will have to worry about it being out of date etc.
 @lru_cache(maxsize=None)
-def get_weather_tle(tle_address: str) -> Dict[str, TLE]:
+def get_weather_tle(tle_location: Union[str, os.PathLike]) -> Dict[str, TLE]:
     """
     Get and load a TLE file for weather satellites.
     """
-    with urlopen(tle_address) as req:
-        weather_tle_lines = req.read().decode().strip().splitlines()
+    if isinstance(tle_location, str):
+        with urlopen(tle_location) as req:
+            weather_tle_bytes = req.read()
+    elif isinstance(tle_location, os.PathLike):
+        with open(tle_location, "rb") as fobj:
+            weather_tle_bytes = fobj.read()
+    else:
+        raise TypeError("tle_location must be a string if a url or PathLike if a local path")
+
+    weather_tle_lines = weather_tle_bytes.decode().strip().splitlines()
 
     n_tle = int(len(weather_tle_lines) / 3)
     weather_tles = [weather_tle_lines[i*3:(i+1)*3] for i in range(n_tle)]
@@ -35,11 +44,12 @@ def get_weather_tle(tle_address: str) -> Dict[str, TLE]:
 
 
 def get_satellite_orbit(satellite_name: str,
-                        tle_address: str="http://www.celestrak.com/NORAD/elements/weather.txt") -> Orbit:
+                        tle_location: Union[str, os.PathLike] = "http://www.celestrak.com/NORAD/elements/weather.txt"
+                        ) -> Orbit:
     """
     Given a weather satellite name as found in the TLE file, return a `poliastro.twobody.Orbit` object.
     """
-    return get_weather_tle()[satellite_name].to_orbit()
+    return get_weather_tle(tle_location)[satellite_name].to_orbit()
 
 
 def get_pass_ground_track(satellite: Orbit,
@@ -80,9 +90,8 @@ def get_pass_ground_track(satellite: Orbit,
     pass_length = pass_length.to(u.s)
 
     pass_times = np.arange(0,
-                        (pass_length + sample_time).to_value(u.s),
-                        sample_time.to_value(u.s)) * u.s
-
+                           (pass_length + sample_time).to_value(u.s),
+                           sample_time.to_value(u.s)) * u.s
 
     # Propagate the orbit to the pass start time
     satellite = satellite.propagate(start_time)

@@ -15,6 +15,7 @@ author = 'Stuart Mumford'
 
 # The full version, including alpha/beta/rc tags
 from aptgeo import __version__
+
 release = __version__
 
 # -- General configuration ---------------------------------------------------
