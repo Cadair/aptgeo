@@ -1,6 +1,15 @@
 A Python package to decode APT signals to coordinate aware formats like GeoTIFF
 -------------------------------------------------------------------------------
 
+This package aims to allow you to process APT data, which is generally received
+from NOAA polar orbiting weather satellites and to convert the data into images
+with full coordinate information.
+
+There are many packages like this in the world, but this one is mine, and it
+aims to produce a GeoTIFF at the end, which seems to be a thing which is rather
+rare.
+
+
 License
 -------
 
